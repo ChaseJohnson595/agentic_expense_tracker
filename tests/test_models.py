@@ -6,8 +6,10 @@ from expense_tracker.models import (
     Expense,
     create_expense,
     parse_amount,
+    summarize_expenses,
     validate_category,
     validate_date,
+    validate_month,
 )
 
 
@@ -89,3 +91,39 @@ def test_create_expense_uses_injected_today_when_date_is_missing() -> None:
     assert expense.amount_cents == 525
     assert expense.category == "transit"
     assert expense.date == "2025-03-04"
+
+
+def test_validate_month_accepts_valid_month() -> None:
+    assert validate_month("2025-03") == "2025-03"
+
+
+@pytest.mark.parametrize("month", ["", "0000-01", "2025-13", "2025-1"])
+def test_validate_month_rejects_invalid_month(month: str) -> None:
+    with pytest.raises(ValueError, match="YYYY-MM"):
+        validate_month(month)
+
+
+def test_summarize_expenses_calculates_selected_month_in_integer_cents() -> None:
+    expenses = [
+        Expense(125, "food", "2025-03-01", id="food1"),
+        Expense(275, "food", "2025-03-02", id="food2"),
+        Expense(300, "travel", "2025-03-03", id="travel1"),
+        Expense(900, "food", "2025-04-01", id="later"),
+    ]
+
+    assert summarize_expenses(expenses, month="2025-03") == (
+        700,
+        {"food": 400, "travel": 300},
+    )
+
+
+def test_summarize_expenses_defaults_to_injected_current_month() -> None:
+    expenses = [
+        Expense(125, "food", "2025-03-01", id="current"),
+        Expense(275, "food", "2025-04-01", id="other"),
+    ]
+
+    assert summarize_expenses(expenses, today=date(2025, 3, 10)) == (
+        125,
+        {"food": 125},
+    )

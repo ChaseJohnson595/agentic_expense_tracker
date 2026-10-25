@@ -1,4 +1,5 @@
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import date as Date
 from decimal import Decimal
@@ -43,6 +44,17 @@ def validate_date(value: str) -> str:
     return value
 
 
+def validate_month(value: str) -> str:
+    """Validate and return a month in YYYY-MM format."""
+    if (
+        not isinstance(value, str)
+        or not re.fullmatch(r"\d{4}-(?:0[1-9]|1[0-2])", value)
+        or value[:4] == "0000"
+    ):
+        raise ValueError("month must be in YYYY-MM format")
+    return value
+
+
 @dataclass(frozen=True)
 class Expense:
     amount_cents: int
@@ -82,3 +94,24 @@ def create_expense(
         date=validate_date(expense_date if expense_date is not None else default_date),
         note=note,
     )
+
+
+def summarize_expenses(
+    expenses: Iterable[Expense],
+    *,
+    month: str | None = None,
+    today: Date | None = None,
+) -> tuple[int, dict[str, int]]:
+    """Calculate the integer-cent total and category totals for one month."""
+    selected_month = validate_month(
+        month if month is not None else (today or Date.today()).strftime("%Y-%m")
+    )
+    category_totals: dict[str, int] = {}
+    total = 0
+    for expense in expenses:
+        if expense.date.startswith(selected_month):
+            total += expense.amount_cents
+            category_totals[expense.category] = (
+                category_totals.get(expense.category, 0) + expense.amount_cents
+            )
+    return total, dict(sorted(category_totals.items()))

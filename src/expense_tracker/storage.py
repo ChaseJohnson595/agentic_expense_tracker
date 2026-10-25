@@ -1,9 +1,6 @@
 import json
 import os
-import re
 import tempfile
-from collections import defaultdict
-from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -106,31 +103,6 @@ def list_expenses(
         key=lambda expense: (expense.date, expense.id),
         reverse=True,
     )
-
-
-def summarize_expenses(
-    data_path: Path | str = DEFAULT_DATA_PATH,
-    *,
-    month: str | None = None,
-    today: date | None = None,
-) -> tuple[int, dict[str, int]]:
-    """Return the month total and integer-cent totals grouped by category."""
-    selected_month = (
-        (today or date.today()).strftime("%Y-%m") if month is None else month
-    )
-    if (
-        not re.fullmatch(r"\d{4}-(?:0[1-9]|1[0-2])", selected_month)
-        or selected_month[:4] == "0000"
-    ):
-        raise ValueError("month must be in YYYY-MM format")
-
-    category_totals: defaultdict[str, int] = defaultdict(int)
-    total = 0
-    for expense in load_expenses(data_path):
-        if expense.date.startswith(selected_month):
-            total += expense.amount_cents
-            category_totals[expense.category] += expense.amount_cents
-    return total, dict(sorted(category_totals.items()))
 
 
 def delete_expense(

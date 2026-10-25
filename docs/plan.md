@@ -39,11 +39,12 @@ described above.
 - `src/expense_tracker/cli.py`: Define the `argparse` commands, call the
   appropriate model and storage operations, and format user-facing output.
   Keep business logic out of this file.
-- `src/expense_tracker/models.py`: Define the expense representation and
-  validation for its fields. Data-file path and today's date must be overridable for tests.
+- `src/expense_tracker/models.py`: Define the expense representation, validation
+  for its fields, and expense summarization calculations. Data-file path and
+  today's date must be overridable for tests.
 - `src/expense_tracker/storage.py`: Own all data-file access and operations for
-  loading, saving, adding, listing/filtering, and deleting
-  expenses.
+  loading, saving, adding, listing/filtering, and deleting expenses. Return
+  expense records to the model layer rather than calculating summaries.
 
 Keep persistence behind the storage boundary so JSON can later be replaced by
 SQLite without moving CLI behavior or model validation into the database layer.

@@ -155,22 +155,124 @@ def test_summary_command_rejects_invalid_month(
     assert "month must be in YYYY-MM format" in capsys.readouterr().err
 
 
-def test_delete_command_confirms_success_and_missing_id(
+def test_delete_command_lists_expenses_and_deletes_selected_entry(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = tmp_path / "expenses.json"
+    keep = Expense(500, "travel", "2025-03-02", id="travel1")
+    remove = Expense(125, "food", "2025-03-01", id="food1", note="Lunch")
+    save_expenses([remove, keep], path)
+
+    monkeypatch.setattr("builtins.input", lambda _prompt: "2")
+    result = cli.main(
+        ["delete"], data_path=path, today=date(2025, 3, 10)
+    )
+
+    output = capsys.readouterr().out
+    assert result == 0
+    assert "1. 2025-03-02  travel  $5.00" in output
+    assert "2. 2025-03-01  food  $1.25 - Lunch" in output
+    assert "q. Cancel" in output
+    assert "Deleted expense: 2025-03-01  food  $1.25." in output
+    assert load_expenses(path) == [keep]
+
+
+def test_delete_command_can_be_cancelled(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = tmp_path / "expenses.json"
+    expense = Expense(125, "food", "2025-03-01", id="food1")
+    save_expenses([expense], path)
+    monkeypatch.setattr("builtins.input", lambda _prompt: "q")
+
+    result = cli.main(["delete"], data_path=path, today=date(2025, 3, 10))
+
+    assert result == 0
+    assert "Deletion cancelled." in capsys.readouterr().out
+    assert load_expenses(path) == [expense]
+
+
+def test_delete_command_handles_empty_expense_list(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     path = tmp_path / "expenses.json"
-    save_expenses([Expense(125, "food", "2025-03-01", id="food1")], path)
 
-    deleted = cli.main(["delete", "food1"], data_path=path)
-    deleted_output = capsys.readouterr().out
-    missing = cli.main(["delete", "missing"], data_path=path)
-    missing_output = capsys.readouterr().out
+    result = cli.main(["delete"], data_path=path, today=date(2025, 3, 10))
 
-    assert deleted == 0
-    assert deleted_output.strip() == "Deleted expense food1."
-    assert load_expenses(path) == []
-    assert missing == 1
-    assert "was not found" in missing_output
+    assert result == 0
+    assert capsys.readouterr().out.strip() == "No expenses to delete for 2025-03."
+    assert not path.exists()
+
+
+@pytest.mark.parametrize("selection", ["invalid", "0", "2"])
+def test_delete_command_rejects_invalid_selection(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    selection: str,
+) -> None:
+    path = tmp_path / "expenses.json"
+    expense = Expense(125, "food", "2025-03-01", id="food1")
+    save_expenses([expense], path)
+    monkeypatch.setattr("builtins.input", lambda _prompt: selection)
+
+    result = cli.main(["delete"], data_path=path, today=date(2025, 3, 10))
+
+    assert result == 1
+    assert "Invalid selection. Nothing was deleted." in capsys.readouterr().err
+    assert load_expenses(path) == [expense]
+
+
+def test_delete_command_defaults_to_injected_current_month(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = tmp_path / "expenses.json"
+    current = Expense(125, "food", "2025-03-01", id="current")
+    previous = Expense(500, "travel", "2025-02-28", id="previous")
+    save_expenses([previous, current], path)
+    monkeypatch.setattr("builtins.input", lambda _prompt: "1")
+
+    result = cli.main(["delete"], data_path=path, today=date(2025, 3, 10))
+
+    output = capsys.readouterr().out
+    assert result == 0
+    assert "current" not in output
+    assert "2025-03-01  food  $1.25" in output
+    assert "2025-02-28" not in output
+    assert load_expenses(path) == [previous]
+
+
+def test_delete_command_accepts_a_month_filter(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = tmp_path / "expenses.json"
+    current = Expense(125, "food", "2025-03-01", id="current")
+    selected = Expense(500, "travel", "2025-02-28", id="selected")
+    save_expenses([selected, current], path)
+    monkeypatch.setattr("builtins.input", lambda _prompt: "1")
+
+    result = cli.main(
+        ["delete", "--month", "2025-02"], data_path=path, today=date(2025, 3, 10)
+    )
+
+    output = capsys.readouterr().out
+    assert result == 0
+    assert "2025-02-28  travel  $5.00" in output
+    assert "2025-03-01" not in output
+    assert load_expenses(path) == [current]
+
+
+def test_delete_command_rejects_invalid_month(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    result = cli.main(
+        ["delete", "--month", "2025-13"], data_path=tmp_path / "expenses.json"
+    )
+
+    assert result == 2
+    assert "month must be in YYYY-MM format" in capsys.readouterr().err
 
 
 def test_cli_help_lists_all_commands(capsys: pytest.CaptureFixture[str]) -> None:

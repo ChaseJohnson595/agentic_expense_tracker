@@ -28,8 +28,10 @@ Report invalid input with clear, specific errors.
 - `summary`: Default to the current month, with an option to select a month.
   Display the total and totals grouped by category. Perform calculations using
   integer cents.
-- `delete`: Remove the expense matching a required ID. Confirm success and
-  clearly report when the ID does not exist.
+- `delete`: By default, display a numbered menu of expenses from the current
+  month. Allow `--month YYYY-MM` to choose another month, and remove the
+  selected entry. Allow the user to cancel without deleting anything, and
+  clearly report when there are no expenses to choose from.
 
 Keep output human-readable and the initial filter options limited to those
 described above.

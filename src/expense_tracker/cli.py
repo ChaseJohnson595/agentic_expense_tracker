@@ -1,10 +1,16 @@
 import argparse
 import sys
+from calendar import monthrange
 from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
 
-from expense_tracker.models import create_expense, summarize_expenses
+from expense_tracker.models import (
+    Expense,
+    create_expense,
+    summarize_expenses,
+    validate_month,
+)
 from expense_tracker.storage import (
     DEFAULT_DATA_PATH,
     StorageError,
@@ -33,8 +39,10 @@ def build_parser() -> argparse.ArgumentParser:
     summary_parser = commands.add_parser("summary", help="Summarize monthly expenses.")
     summary_parser.add_argument("--month", help="Month to summarize in YYYY-MM format.")
 
-    delete_parser = commands.add_parser("delete", help="Delete an expense by ID.")
-    delete_parser.add_argument("expense_id", help="ID of the expense to delete.")
+    delete_parser = commands.add_parser("delete", help="Choose an expense to delete.")
+    delete_parser.add_argument(
+        "--month", help="Month of expenses to choose from, in YYYY-MM format."
+    )
     return parser
 
 
@@ -63,7 +71,7 @@ def _dispatch(
         return _list(arguments, path)
     if arguments.command == "summary":
         return _summary(arguments, path, today)
-    return _delete(arguments, path)
+    return _delete(arguments, path, today)
 
 
 def _add(arguments: argparse.Namespace, path: Path | str, today: date | None) -> int:
@@ -117,12 +125,72 @@ def _summary(
     return 0
 
 
-def _delete(arguments: argparse.Namespace, path: Path | str) -> int:
-    if not delete_expense(arguments.expense_id, path):
-        print(f"Expense with ID {arguments.expense_id!r} was not found.")
+def _delete(
+    arguments: argparse.Namespace, path: Path | str, today: date | None
+) -> int:
+    selected_month, expenses = _delete_candidates(arguments, path, today)
+    if not expenses:
+        print(f"No expenses to delete for {selected_month}.")
+        return 0
+
+    try:
+        selected_index = _choose_expense(expenses)
+    except ValueError as error:
+        print(f"{error} Nothing was deleted.", file=sys.stderr)
         return 1
-    print(f"Deleted expense {arguments.expense_id}.")
+    if selected_index is None:
+        print("Deletion cancelled.")
+        return 0
+
+    expense = expenses[selected_index - 1]
+    if not delete_expense(expense.id, path):
+        print("The selected expense was not found; nothing was deleted.")
+        return 1
+    print(
+        f"Deleted expense: {expense.date}  {expense.category}  "
+        f"{_format_money(expense.amount_cents)}."
+    )
     return 0
+
+
+def _delete_candidates(
+    arguments: argparse.Namespace, path: Path | str, today: date | None
+) -> tuple[str, list[Expense]]:
+    selected_month = validate_month(
+        arguments.month or (today or date.today()).strftime("%Y-%m")
+    )
+    year, month = (int(part) for part in selected_month.split("-"))
+    expenses = list_expenses(
+        path,
+        start_date=f"{selected_month}-01",
+        end_date=f"{selected_month}-{monthrange(year, month)[1]:02d}",
+    )
+    return selected_month, expenses
+
+
+def _choose_expense(expenses: list[Expense]) -> int | None:
+    print("Select an expense to delete:")
+    for index, expense in enumerate(expenses, start=1):
+        note = f" - {expense.note}" if expense.note else ""
+        print(
+            f"{index}. {expense.date}  {expense.category}  "
+            f"{_format_money(expense.amount_cents)}{note}"
+        )
+    print("q. Cancel")
+
+    try:
+        selection = input("Choose an expense number or q: ").strip()
+    except EOFError as error:
+        raise ValueError("No selection received.") from error
+    if selection.casefold() == "q":
+        return None
+    try:
+        selected_index = int(selection)
+    except ValueError as error:
+        raise ValueError("Invalid selection.") from error
+    if not 1 <= selected_index <= len(expenses):
+        raise ValueError("Invalid selection.")
+    return selected_index
 
 
 def _format_money(amount_cents: int) -> str:

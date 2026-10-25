@@ -1,5 +1,4 @@
 import json
-from datetime import date
 from pathlib import Path
 
 import pytest
@@ -12,7 +11,6 @@ from expense_tracker.storage import (
     list_expenses,
     load_expenses,
     save_expenses,
-    summarize_expenses,
 )
 
 
@@ -135,52 +133,6 @@ def test_list_expenses_rejects_reversed_date_range(tmp_path: Path) -> None:
             start_date="2025-03-02",
             end_date="2025-03-01",
         )
-
-
-def test_summarize_expenses_uses_integer_cents_and_selected_month(
-    tmp_path: Path,
-) -> None:
-    path = tmp_path / "expenses.json"
-    save_expenses(
-        [
-            make_expense(125, "food", "2025-03-01", "food1"),
-            make_expense(275, "food", "2025-03-02", "food2"),
-            make_expense(300, "travel", "2025-03-03", "travel1"),
-            make_expense(900, "food", "2025-04-01", "future"),
-        ],
-        path,
-    )
-
-    assert summarize_expenses(path, month="2025-03") == (
-        700,
-        {"food": 400, "travel": 300},
-    )
-
-
-def test_summarize_expenses_defaults_to_injected_current_month(
-    tmp_path: Path,
-) -> None:
-    path = tmp_path / "expenses.json"
-    save_expenses(
-        [
-            make_expense(125, "food", "2025-03-01", "current"),
-            make_expense(275, "food", "2025-04-01", "other"),
-        ],
-        path,
-    )
-
-    assert summarize_expenses(path, today=date(2025, 3, 10)) == (
-        125,
-        {"food": 125},
-    )
-
-
-@pytest.mark.parametrize("month", ["", "0000-01", "2025-13", "2025-1"])
-def test_summarize_expenses_rejects_invalid_month(
-    tmp_path: Path, month: str
-) -> None:
-    with pytest.raises(ValueError, match="YYYY-MM"):
-        summarize_expenses(tmp_path / "expenses.json", month=month)
 
 
 def test_delete_expense_removes_match_and_reports_missing_id(tmp_path: Path) -> None:

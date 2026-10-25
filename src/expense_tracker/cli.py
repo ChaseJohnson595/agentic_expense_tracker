@@ -4,14 +4,14 @@ from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
 
-from expense_tracker.models import create_expense
+from expense_tracker.models import create_expense, summarize_expenses
 from expense_tracker.storage import (
     DEFAULT_DATA_PATH,
     StorageError,
     add_expense,
     delete_expense,
     list_expenses,
-    summarize_expenses,
+    load_expenses,
 )
 
 
@@ -105,7 +105,9 @@ def _summary(
     arguments: argparse.Namespace, path: Path | str, today: date | None
 ) -> int:
     selected_month = arguments.month or (today or date.today()).strftime("%Y-%m")
-    total, category_totals = summarize_expenses(path, month=selected_month, today=today)
+    total, category_totals = summarize_expenses(
+        load_expenses(path), month=selected_month
+    )
     print(f"Total for {selected_month}: {_format_money(total)}")
     if not category_totals:
         print("No expenses found for this month.")

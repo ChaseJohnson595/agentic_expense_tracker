@@ -12,3 +12,6 @@ where = ["src"]
 
 [project.scripts]
 expense-tracker = "expense_tracker.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]

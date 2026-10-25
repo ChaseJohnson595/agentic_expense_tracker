@@ -64,7 +64,9 @@ class Expense:
     id: str = field(default_factory=lambda: uuid4().hex[:8])
 
     def __post_init__(self) -> None:
-        if isinstance(self.amount_cents, bool) or not isinstance(self.amount_cents, int):
+        if isinstance(self.amount_cents, bool) or not isinstance(
+            self.amount_cents, int
+        ):
             raise TypeError("amount_cents must be an integer")
         if self.amount_cents <= 0:
             raise ValueError("amount must be greater than zero")

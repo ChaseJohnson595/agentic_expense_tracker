@@ -125,9 +125,7 @@ def _summary(
     return 0
 
 
-def _delete(
-    arguments: argparse.Namespace, path: Path | str, today: date | None
-) -> int:
+def _delete(arguments: argparse.Namespace, path: Path | str, today: date | None) -> int:
     selected_month, expenses = _delete_candidates(arguments, path, today)
     if not expenses:
         print(f"No expenses to delete for {selected_month}.")

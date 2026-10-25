@@ -166,9 +166,7 @@ def test_delete_command_lists_expenses_and_deletes_selected_entry(
     save_expenses([remove, keep], path)
 
     monkeypatch.setattr("builtins.input", lambda _prompt: "2")
-    result = cli.main(
-        ["delete"], data_path=path, today=date(2025, 3, 10)
-    )
+    result = cli.main(["delete"], data_path=path, today=date(2025, 3, 10))
 
     output = capsys.readouterr().out
     assert result == 0

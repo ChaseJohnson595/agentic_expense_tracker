@@ -73,7 +73,9 @@ def test_expense_validates_fields_and_generates_short_id() -> None:
 
 @pytest.mark.parametrize("amount_cents", [0, -1, 1.5, True])
 def test_expense_rejects_invalid_amount_cents(amount_cents: int) -> None:
-    expected_error = TypeError if isinstance(amount_cents, (float, bool)) else ValueError
+    expected_error = (
+        TypeError if isinstance(amount_cents, (float, bool)) else ValueError
+    )
     with pytest.raises(expected_error):
         Expense(amount_cents=amount_cents, category="food", date="2025-02-03")
 

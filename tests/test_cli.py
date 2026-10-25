@@ -41,6 +41,22 @@ def test_add_command_reports_invalid_amount_without_saving(
     assert not path.exists()
 
 
+def test_add_command_uses_explicit_date(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    path = tmp_path / "expenses.json"
+
+    result = cli.main(
+        ["add", "12.50", "--category", "food", "--date", "2025-03-01"],
+        data_path=path,
+        today=date(2025, 3, 10),
+    )
+
+    assert result == 0
+    assert "$12.50 for food on 2025-03-01." in capsys.readouterr().out
+    assert load_expenses(path)[0].date == "2025-03-01"
+
+
 def test_list_command_applies_category_and_date_filters(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -107,6 +123,27 @@ def test_summary_command_uses_injected_current_month(
     assert "later" not in output
 
 
+def test_summary_command_accepts_selected_month(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    path = tmp_path / "expenses.json"
+    save_expenses(
+        [
+            Expense(125, "food", "2025-03-01", id="march"),
+            Expense(275, "food", "2025-04-01", id="april"),
+        ],
+        path,
+    )
+
+    result = cli.main(["summary", "--month", "2025-04"], data_path=path)
+
+    output = capsys.readouterr().out
+    assert result == 0
+    assert "Total for 2025-04: $2.75" in output
+    assert "food: $2.75" in output
+    assert "march" not in output
+
+
 def test_summary_command_rejects_invalid_month(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -134,3 +171,26 @@ def test_delete_command_confirms_success_and_missing_id(
     assert load_expenses(path) == []
     assert missing == 1
     assert "was not found" in missing_output
+
+
+def test_cli_help_lists_all_commands(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as result:
+        cli.main(["--help"])
+
+    output = capsys.readouterr().out
+    assert result.value.code == 0
+    assert all(command in output for command in ("add", "list", "summary", "delete"))
+
+
+def test_list_command_reports_storage_error_without_success_output(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    path = tmp_path / "expenses.json"
+    path.write_text("{invalid json", encoding="utf-8")
+
+    result = cli.main(["list"], data_path=path)
+
+    captured = capsys.readouterr()
+    assert result == 2
+    assert captured.out == ""
+    assert "Invalid JSON" in captured.err

@@ -1,56 +1,53 @@
 # Expense Tracker
 
-A small command-line tool for logging and summarizing personal expenses.
+A small command-line tool for recording, listing, summarizing, and deleting
+personal expenses.
 
-This is a learning project for practicing agent-assisted development and standard engineering habits: version control, testing, linting, and CI.
+## Requirements and setup
 
-> **Status:** In development. The usage examples below describe the planned interface and may change as commands are built.
+- Python 3.12 or later
 
-## Features (planned)
+Create and activate a virtual environment, then install the project:
 
-- Add an expense with an amount, category, date, and optional note
-- List expenses, with optional filtering
-- Summarize spending by month and category
-- Delete an expense
-- Local storage (JSON first, SQLite later)
-
-## Requirements
-
-- Python 3.12+
-
-## Setup
-
-```bash
-git clone <your-repo-url>
-cd expense-tracker
-
+```powershell
 python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-
-pip install pytest ruff
-pip install -e .                 # once pyproject.toml is configured
+.venv\Scripts\Activate.ps1
+python -m pip install -e .
 ```
 
-## Usage (planned)
+On macOS or Linux, activate the environment with
+`source .venv/bin/activate`.
 
-```bash
+## Usage
+
+Run commands with `python -m expense_tracker`:
+
+```text
 python -m expense_tracker add 12.50 --category food --note "Lunch"
 python -m expense_tracker list
+python -m expense_tracker list --start-date 2026-10-01 --end-date 2026-10-31 --category food
+python -m expense_tracker summary
 python -m expense_tracker summary --month 2026-10
 python -m expense_tracker delete <id>
 ```
 
-Run `python -m expense_tracker --help` for the current list of commands.
+`add` accepts an amount with at most two decimal places, a required category,
+an optional `--date` in `YYYY-MM-DD` format, and an optional `--note`. If no
+date is provided, today's date is used. `list` sorts newest dates first and
+accepts inclusive `--start-date` and `--end-date` filters and a `--category`
+filter. `summary` defaults to the current month and reports integer-cent
+totals overall and by category. `delete` takes the expense ID shown by `add`
+or `list`.
 
-## Development
+Run `python -m expense_tracker --help` or
+`python -m expense_tracker <command> --help` for command help.
 
-```bash
-python -m pytest -q      # run tests
-ruff check .             # lint
-ruff format .            # format
-```
+## Data storage
 
-CI runs the tests and lint on every push once the GitHub Actions workflow is added.
+Expenses are stored as JSON at `~/.expense_tracker/expenses.json` (for
+example, `%USERPROFILE%\.expense_tracker\expenses.json` on Windows). A missing
+data file is created when the first expense is added. Writes use a temporary
+file and replace the data file only after a successful save.
 
 ## Project structure
 
@@ -63,14 +60,21 @@ tests/            one test file per module
 docs/plan.md      design decisions and task checklist
 ```
 
-## Design notes
+## Development
 
-- Amounts are stored as integer cents to avoid floating-point errors.
-- Dates are stored as ISO 8601 strings (`YYYY-MM-DD`).
-- Business logic lives outside `cli.py` so it can be tested directly.
+Install the development tools in the active environment if needed:
 
-See `docs/plan.md` for the full plan and progress.
+```text
+python -m pip install pytest ruff
+```
 
-## Contributing
+Run tests and lint:
 
-This is a personal learning project. Work happens on short-lived branches and is merged through pull requests once tests and lint pass.
+```text
+python -m pytest -q
+ruff check .
+```
+
+Amounts are stored as integer cents and dates as ISO 8601 strings
+(`YYYY-MM-DD`). Business logic lives outside the CLI. See [docs/plan.md](docs/plan.md)
+for the design and implementation plan.

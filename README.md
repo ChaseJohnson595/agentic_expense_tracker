@@ -3,6 +3,8 @@
 A small command-line tool for recording, listing, summarizing, and deleting
 personal expenses.
 
+This is a learning project for practicing agent-assisted development and standard engineering habits: version control, testing, linting, and CI.
+
 ## Requirements and setup
 
 - Python 3.12 or later
@@ -31,12 +33,15 @@ python -m expense_tracker summary --month 2026-10
 python -m expense_tracker delete <id>
 ```
 
-`add` accepts an amount with at most two decimal places, a required category,
+* `add` accepts an amount with at most two decimal places, a required category,
 an optional `--date` in `YYYY-MM-DD` format, and an optional `--note`. If no
-date is provided, today's date is used. `list` sorts newest dates first and
+date is provided, today's date is used. 
+* `list` sorts newest dates first and
 accepts inclusive `--start-date` and `--end-date` filters and a `--category`
-filter. `summary` defaults to the current month and reports integer-cent
-totals overall and by category. `delete` takes the expense ID shown by `add`
+filter. 
+* `summary` defaults to the current month and reports integer-cent
+totals overall and by category. 
+* `delete` takes the expense ID shown by `add`
 or `list`.
 
 Run `python -m expense_tracker --help` or
@@ -44,9 +49,9 @@ Run `python -m expense_tracker --help` or
 
 ## Data storage
 
-Expenses are stored as JSON at `~/.expense_tracker/expenses.json` (for
-example, `%USERPROFILE%\.expense_tracker\expenses.json` on Windows). A missing
-data file is created when the first expense is added. Writes use a temporary
+Expenses are currently stored as JSON at `~/.expense_tracker/expenses.json` (for
+example, `%USERPROFILE%\.expense_tracker\expenses.json` on Windows) with future plans to migrate to SQLite. A
+data file is created only when the first expense is added. Writes use a temporary
 file and replace the data file only after a successful save.
 
 ## Project structure

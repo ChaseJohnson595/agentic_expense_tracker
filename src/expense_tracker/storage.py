@@ -23,7 +23,9 @@ def load_expenses(data_path: Path | str = DEFAULT_DATA_PATH) -> list[Expense]:
     except OSError as error:
         raise StorageError(f"Could not read expenses from {path}: {error}") from error
     except UnicodeError as error:
-        raise StorageError(f"Expense file {path} is not valid UTF-8: {error}") from error
+        raise StorageError(
+            f"Expense file {path} is not valid UTF-8: {error}"
+        ) from error
 
     try:
         records = json.loads(content)
@@ -63,9 +65,7 @@ def save_expenses(
         raise StorageError(message) from error
 
 
-def add_expense(
-    expense: Expense, data_path: Path | str = DEFAULT_DATA_PATH
-) -> Expense:
+def add_expense(expense: Expense, data_path: Path | str = DEFAULT_DATA_PATH) -> Expense:
     """Append one expense, rejecting an ID that is already in use."""
     expenses = load_expenses(data_path)
     if any(existing.id == expense.id for existing in expenses):
@@ -105,9 +105,7 @@ def list_expenses(
     )
 
 
-def delete_expense(
-    expense_id: str, data_path: Path | str = DEFAULT_DATA_PATH
-) -> bool:
+def delete_expense(expense_id: str, data_path: Path | str = DEFAULT_DATA_PATH) -> bool:
     """Delete the matching expense and return whether an expense was found."""
     expenses = load_expenses(data_path)
     remaining = [expense for expense in expenses if expense.id != expense_id]

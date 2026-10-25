@@ -30,7 +30,8 @@ python -m expense_tracker list
 python -m expense_tracker list --start-date 2026-10-01 --end-date 2026-10-31 --category food
 python -m expense_tracker summary
 python -m expense_tracker summary --month 2026-10
-python -m expense_tracker delete <id>
+python -m expense_tracker delete
+python -m expense_tracker delete --month 2026-09
 ```
 
 * `add` accepts an amount with at most two decimal places, a required category,
@@ -41,8 +42,9 @@ accepts inclusive `--start-date` and `--end-date` filters and a `--category`
 filter. 
 * `summary` defaults to the current month and reports integer-cent
 totals overall and by category. 
-* `delete` takes the expense ID shown by `add`
-or `list`.
+* `delete` displays a numbered menu of expenses from the current month. Use
+`--month YYYY-MM` to choose another month. Choose an entry by number, or enter
+`q` to exit without deleting anything.
 
 Run `python -m expense_tracker --help` or
 `python -m expense_tracker <command> --help` for command help.

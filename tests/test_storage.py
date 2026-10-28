@@ -150,9 +150,7 @@ def test_import_json_expenses_rolls_back_on_existing_id_conflict(
 
 def test_import_json_expenses_reports_missing_source(tmp_path: Path) -> None:
     with pytest.raises(StorageError, match="does not exist"):
-        import_json_expenses(
-            tmp_path / "missing.json", tmp_path / "expenses.sqlite3"
-        )
+        import_json_expenses(tmp_path / "missing.json", tmp_path / "expenses.sqlite3")
 
 
 def test_database_schema_initializes_and_persists_across_connections(

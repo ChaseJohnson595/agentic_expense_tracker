@@ -16,6 +16,7 @@ from expense_tracker.storage import (
     StorageError,
     add_expense,
     delete_expense,
+    import_json_expenses,
     list_expenses,
     load_expenses,
 )
@@ -43,6 +44,11 @@ def build_parser() -> argparse.ArgumentParser:
     delete_parser.add_argument(
         "--month", help="Month of expenses to choose from, in YYYY-MM format."
     )
+
+    import_parser = commands.add_parser(
+        "import-json", help="Import expenses from a JSON file."
+    )
+    import_parser.add_argument("path", help="Path to the JSON file to import.")
     return parser
 
 
@@ -71,6 +77,8 @@ def _dispatch(
         return _list(arguments, path)
     if arguments.command == "summary":
         return _summary(arguments, path, today)
+    if arguments.command == "import-json":
+        return _import_json(arguments, path)
     return _delete(arguments, path, today)
 
 
@@ -122,6 +130,12 @@ def _summary(
     else:
         for category, amount in category_totals.items():
             print(f"{category}: {_format_money(amount)}")
+    return 0
+
+
+def _import_json(arguments: argparse.Namespace, path: Path | str) -> int:
+    imported_count = import_json_expenses(arguments.path, path)
+    print(f"Imported {imported_count} expenses from {arguments.path}.")
     return 0
 
 

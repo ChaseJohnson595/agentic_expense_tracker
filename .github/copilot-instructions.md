@@ -30,6 +30,7 @@ If a command fails, report the error and ask before trying anything else.
 - Raise specific exceptions with clear messages; do not use bare `except`.
 
 ## Workflow
+- For all changes to files in src/ or tests/ run the test suite and ensure everything passes.
 - For changes touching more than one file, propose a short plan and wait for approval before editing.
 - Make one small change per request. Do not refactor unrelated code.
 - Add or update a test for every behavior change, then run the tests and report the result.

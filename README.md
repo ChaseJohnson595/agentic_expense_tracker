@@ -32,29 +32,33 @@ python -m expense_tracker summary
 python -m expense_tracker summary --month 2026-10
 python -m expense_tracker delete
 python -m expense_tracker delete --month 2026-09
+python -m expense_tracker import-json ./expenses.json
 ```
 
 * `add` accepts an amount with at most two decimal places, a required category,
 an optional `--date` in `YYYY-MM-DD` format, and an optional `--note`. If no
-date is provided, today's date is used. 
-* `list` sorts newest dates first and
-accepts inclusive `--start-date` and `--end-date` filters and a `--category`
-filter. 
-* `summary` defaults to the current month and reports integer-cent
-totals overall and by category. 
+date is provided, today's date is used.
+* `list` sorts newest dates first and accepts inclusive `--start-date` and
+`--end-date` filters and a `--category` filter.
+* `summary` defaults to the current month and reports integer-cent totals
+overall and by category.
 * `delete` displays a numbered menu of expenses from the current month. Use
 `--month YYYY-MM` to choose another month. Choose an entry by number, or enter
 `q` to exit without deleting anything.
+* `import-json <path>` reads an existing JSON array of expense records and
+imports them into SQLite. The source file is left unchanged, and JSON is not
+used for ongoing storage.
 
 Run `python -m expense_tracker --help` or
 `python -m expense_tracker <command> --help` for command help.
 
 ## Data storage
 
-Expenses are currently stored as JSON at `~/.expense_tracker/expenses.json` (for
-example, `%USERPROFILE%\.expense_tracker\expenses.json` on Windows) with future plans to migrate to SQLite. A
-data file is created only when the first expense is added. Writes use a temporary
-file and replace the data file only after a successful save.
+Expenses are stored in SQLite at `~/.expense_tracker/expenses.sqlite3` (for
+example, `%USERPROFILE%\.expense_tracker\expenses.sqlite3` on Windows). The
+application creates the parent directory and database schema automatically when
+needed. JSON remains an import-only format for migrating existing records into
+SQLite; it is not used for ongoing storage.
 
 ## Project structure
 

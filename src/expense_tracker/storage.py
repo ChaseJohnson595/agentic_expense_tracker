@@ -72,6 +72,61 @@ def save_expenses(
             connection.close()
 
 
+def import_json_expenses(
+    source_path: Path | str, data_path: Path | str = DEFAULT_DATA_PATH
+) -> int:
+    """Import validated JSON expenses atomically and return the imported count."""
+    source = Path(source_path)
+    if not source.exists():
+        raise StorageError(f"Expense file {source} does not exist")
+    expenses = _load_json_expenses(source)
+
+    path = Path(data_path)
+    connection: sqlite3.Connection | None = None
+    try:
+        connection = _connect_database(path)
+        _initialize_database(connection)
+        _insert_imported_expenses(connection, expenses, source, path)
+    except sqlite3.Error as error:
+        raise StorageError(
+            f"Could not import expenses from {source} into {path}: {error}"
+        ) from error
+    finally:
+        if connection is not None:
+            connection.close()
+    return len(expenses)
+
+
+def _insert_imported_expenses(
+    connection: sqlite3.Connection,
+    expenses: list[Expense],
+    source: Path,
+    database: Path,
+) -> None:
+    try:
+        with connection:
+            connection.executemany(
+                """
+                INSERT INTO expenses (id, amount_cents, category, date, note)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                [_expense_row(expense) for expense in expenses],
+            )
+    except sqlite3.IntegrityError as error:
+        if "UNIQUE constraint failed: expenses.id" in str(error):
+            raise StorageError(
+                f"Could not import expenses from {source}: an expense ID "
+                f"already exists in {database}"
+            ) from error
+        raise StorageError(
+            f"Could not import expenses from {source} into {database}: {error}"
+        ) from error
+    except sqlite3.Error as error:
+        raise StorageError(
+            f"Could not import expenses from {source} into {database}: {error}"
+        ) from error
+
+
 def add_expense(expense: Expense, data_path: Path | str = DEFAULT_DATA_PATH) -> Expense:
     """Insert a single expense and reject duplicate IDs."""
     path = Path(data_path)

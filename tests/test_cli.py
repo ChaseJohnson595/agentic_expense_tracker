@@ -1,3 +1,4 @@
+import json
 from datetime import date
 from pathlib import Path
 
@@ -11,7 +12,7 @@ from expense_tracker.storage import load_expenses, save_expenses
 def test_add_command_creates_expense_and_defaults_to_injected_date(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    path = tmp_path / "expenses.json"
+    path = tmp_path / "expenses.sqlite3"
 
     result = cli.main(
         ["add", "12.50", "--category", " food ", "--note", "Lunch"],
@@ -32,7 +33,7 @@ def test_add_command_creates_expense_and_defaults_to_injected_date(
 def test_add_command_reports_invalid_amount_without_saving(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    path = tmp_path / "expenses.json"
+    path = tmp_path / "expenses.sqlite3"
 
     result = cli.main(["add", "1.234", "--category", "food"], data_path=path)
 
@@ -44,7 +45,7 @@ def test_add_command_reports_invalid_amount_without_saving(
 def test_add_command_uses_explicit_date(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    path = tmp_path / "expenses.json"
+    path = tmp_path / "expenses.sqlite3"
 
     result = cli.main(
         ["add", "12.50", "--category", "food", "--date", "2025-03-01"],
@@ -60,7 +61,7 @@ def test_add_command_uses_explicit_date(
 def test_list_command_applies_category_and_date_filters(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    path = tmp_path / "expenses.json"
+    path = tmp_path / "expenses.sqlite3"
     save_expenses(
         [
             Expense(1250, "food", "2025-03-01", id="food1"),
@@ -93,7 +94,7 @@ def test_list_command_applies_category_and_date_filters(
 def test_list_command_explains_when_no_expenses_match(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    result = cli.main(["list"], data_path=tmp_path / "expenses.json")
+    result = cli.main(["list"], data_path=tmp_path / "expenses.sqlite3")
 
     assert result == 0
     assert capsys.readouterr().out.strip() == "No expenses found."
@@ -102,7 +103,7 @@ def test_list_command_explains_when_no_expenses_match(
 def test_summary_command_uses_injected_current_month(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    path = tmp_path / "expenses.json"
+    path = tmp_path / "expenses.sqlite3"
     save_expenses(
         [
             Expense(125, "food", "2025-03-01", id="food1"),
@@ -126,7 +127,7 @@ def test_summary_command_uses_injected_current_month(
 def test_summary_command_accepts_selected_month(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    path = tmp_path / "expenses.json"
+    path = tmp_path / "expenses.sqlite3"
     save_expenses(
         [
             Expense(125, "food", "2025-03-01", id="march"),
@@ -148,7 +149,7 @@ def test_summary_command_rejects_invalid_month(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     result = cli.main(
-        ["summary", "--month", "2025-13"], data_path=tmp_path / "expenses.json"
+        ["summary", "--month", "2025-13"], data_path=tmp_path / "expenses.sqlite3"
     )
 
     assert result == 2
@@ -160,7 +161,7 @@ def test_delete_command_lists_expenses_and_deletes_selected_entry(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    path = tmp_path / "expenses.json"
+    path = tmp_path / "expenses.sqlite3"
     keep = Expense(500, "travel", "2025-03-02", id="travel1")
     remove = Expense(125, "food", "2025-03-01", id="food1", note="Lunch")
     save_expenses([remove, keep], path)
@@ -180,7 +181,7 @@ def test_delete_command_lists_expenses_and_deletes_selected_entry(
 def test_delete_command_can_be_cancelled(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    path = tmp_path / "expenses.json"
+    path = tmp_path / "expenses.sqlite3"
     expense = Expense(125, "food", "2025-03-01", id="food1")
     save_expenses([expense], path)
     monkeypatch.setattr("builtins.input", lambda _prompt: "q")
@@ -195,7 +196,7 @@ def test_delete_command_can_be_cancelled(
 def test_delete_command_handles_empty_expense_list(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    path = tmp_path / "expenses.json"
+    path = tmp_path / "expenses.sqlite3"
 
     result = cli.main(["delete"], data_path=path, today=date(2025, 3, 10))
 
@@ -211,7 +212,7 @@ def test_delete_command_rejects_invalid_selection(
     monkeypatch: pytest.MonkeyPatch,
     selection: str,
 ) -> None:
-    path = tmp_path / "expenses.json"
+    path = tmp_path / "expenses.sqlite3"
     expense = Expense(125, "food", "2025-03-01", id="food1")
     save_expenses([expense], path)
     monkeypatch.setattr("builtins.input", lambda _prompt: selection)
@@ -226,7 +227,7 @@ def test_delete_command_rejects_invalid_selection(
 def test_delete_command_defaults_to_injected_current_month(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    path = tmp_path / "expenses.json"
+    path = tmp_path / "expenses.sqlite3"
     current = Expense(125, "food", "2025-03-01", id="current")
     previous = Expense(500, "travel", "2025-02-28", id="previous")
     save_expenses([previous, current], path)
@@ -245,7 +246,7 @@ def test_delete_command_defaults_to_injected_current_month(
 def test_delete_command_accepts_a_month_filter(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    path = tmp_path / "expenses.json"
+    path = tmp_path / "expenses.sqlite3"
     current = Expense(125, "food", "2025-03-01", id="current")
     selected = Expense(500, "travel", "2025-02-28", id="selected")
     save_expenses([selected, current], path)
@@ -266,7 +267,7 @@ def test_delete_command_rejects_invalid_month(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     result = cli.main(
-        ["delete", "--month", "2025-13"], data_path=tmp_path / "expenses.json"
+        ["delete", "--month", "2025-13"], data_path=tmp_path / "expenses.sqlite3"
     )
 
     assert result == 2
@@ -279,18 +280,98 @@ def test_cli_help_lists_all_commands(capsys: pytest.CaptureFixture[str]) -> None
 
     output = capsys.readouterr().out
     assert result.value.code == 0
-    assert all(command in output for command in ("add", "list", "summary", "delete"))
+    assert all(
+        command in output
+        for command in ("add", "list", "summary", "delete", "import-json")
+    )
 
 
 def test_list_command_reports_storage_error_without_success_output(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    path = tmp_path / "expenses.json"
-    path.write_text("{invalid json", encoding="utf-8")
+    path = tmp_path / "expenses.sqlite3"
+    path.mkdir()
 
     result = cli.main(["list"], data_path=path)
 
     captured = capsys.readouterr()
     assert result == 2
     assert captured.out == ""
+    assert "Could not open expense database" in captured.err
+
+
+def test_import_json_command_imports_expenses_without_modifying_source(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    source = tmp_path / "expenses.json"
+    source_contents = json.dumps(
+        [
+            {
+                "id": "food1234",
+                "amount_cents": 1250,
+                "category": "food",
+                "date": "2025-03-01",
+                "note": "Lunch",
+            }
+        ],
+        indent=2,
+    )
+    source.write_text(source_contents, encoding="utf-8")
+    database = tmp_path / "expenses.sqlite3"
+
+    result = cli.main(["import-json", str(source)], data_path=database)
+
+    output = capsys.readouterr().out
+    assert result == 0
+    assert "Imported 1 expenses" in output
+    assert str(source) in output
+    assert load_expenses(database) == [
+        Expense(1250, "food", "2025-03-01", id="food1234", note="Lunch")
+    ]
+    assert source.read_text(encoding="utf-8") == source_contents
+
+
+def test_import_json_command_reports_failure_without_success_output(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    source = tmp_path / "invalid.json"
+    source.write_text("{invalid json", encoding="utf-8")
+
+    result = cli.main(
+        ["import-json", str(source)], data_path=tmp_path / "expenses.sqlite3"
+    )
+
+    captured = capsys.readouterr()
+    assert result == 2
+    assert captured.out == ""
     assert "Invalid JSON" in captured.err
+
+
+def test_import_json_command_reports_duplicate_id_conflict_without_success_output(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    source = tmp_path / "expenses.json"
+    source.write_text(
+        json.dumps(
+            [
+                {
+                    "id": "existing",
+                    "amount_cents": 1250,
+                    "category": "food",
+                    "date": "2025-03-01",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    database = tmp_path / "expenses.sqlite3"
+    existing = Expense(500, "travel", "2025-03-02", id="existing")
+    save_expenses([existing], database)
+
+    result = cli.main(["import-json", str(source)], data_path=database)
+
+    captured = capsys.readouterr()
+    assert result == 2
+    assert captured.out == ""
+    assert "expense ID already exists" in captured.err
+    assert load_expenses(database) == [existing]

@@ -110,10 +110,10 @@ Cover:
 
 ## Implementation sequence
 
-1. [ ] Replace JSON as the primary storage with SQLite in `storage.py`; define
+1. [x] Replace JSON as the primary storage with SQLite in `storage.py`; define
    schema initialization, the default database path, injectable test paths,
    CRUD operations, and clear transactional/error behavior.
-2. [ ] Implement the JSON-to-SQLite import operation. Validate the complete
+2. [x] Implement the JSON-to-SQLite import operation. Validate the complete
    source before committing, roll back the whole import on failure, and leave
    the source file unchanged.
 3. [ ] Update the CLI to use SQLite for all existing commands and add

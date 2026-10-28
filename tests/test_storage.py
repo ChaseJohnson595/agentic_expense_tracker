@@ -1,3 +1,4 @@
+import json
 import sqlite3
 from pathlib import Path
 
@@ -8,6 +9,7 @@ from expense_tracker.storage import (
     StorageError,
     add_expense,
     delete_expense,
+    import_json_expenses,
     list_expenses,
     load_expenses,
     save_expenses,
@@ -48,6 +50,107 @@ def test_save_and_load_round_trip_creates_parent_directory(tmp_path: Path) -> No
             "SELECT id, amount_cents, category, date, note FROM expenses"
         ).fetchall()
     assert rows == [("food1234", 1250, "food", "2025-01-02", "Lunch")]
+
+
+def test_import_json_expenses_imports_records_and_preserves_source(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "expenses.json"
+    source_contents = json.dumps(
+        [
+            {
+                "id": "food1234",
+                "amount_cents": 1250,
+                "category": " food ",
+                "date": "2025-01-02",
+                "note": "Lunch",
+            },
+            {
+                "id": "transit1",
+                "amount_cents": 400,
+                "category": "transit",
+                "date": "2025-01-03",
+                "note": None,
+            },
+        ],
+        indent=2,
+    )
+    source.write_text(source_contents, encoding="utf-8")
+    database = tmp_path / "expenses.sqlite3"
+
+    assert import_json_expenses(source, database) == 2
+    assert load_expenses(database) == [
+        make_expense(400, "transit", "2025-01-03", "transit1"),
+        make_expense(1250, "food", "2025-01-02", "food1234", "Lunch"),
+    ]
+    assert source.read_text(encoding="utf-8") == source_contents
+
+
+@pytest.mark.parametrize(
+    ("source_contents", "message"),
+    [
+        ("{not json", "Invalid JSON"),
+        ('{"not": "an array"}', "must contain a JSON array"),
+        (
+            (
+                '[{"id": "bad", "amount_cents": 0, "category": "food", '
+                '"date": "2025-01-01"}]'
+            ),
+            "Invalid expense record",
+        ),
+    ],
+)
+def test_import_json_expenses_rejects_invalid_source_without_database_changes(
+    tmp_path: Path, source_contents: str, message: str
+) -> None:
+    source = tmp_path / "expenses.json"
+    source.write_text(source_contents, encoding="utf-8")
+    database = tmp_path / "expenses.sqlite3"
+    existing = make_expense(500, "food", "2025-01-01", "existing")
+    save_expenses([existing], database)
+
+    with pytest.raises(StorageError, match=message):
+        import_json_expenses(source, database)
+
+    assert load_expenses(database) == [existing]
+    assert source.read_text(encoding="utf-8") == source_contents
+
+
+def test_import_json_expenses_rolls_back_on_existing_id_conflict(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "expenses.json"
+    source_contents = json.dumps(
+        [
+            {
+                "id": "new",
+                "amount_cents": 100,
+                "category": "food",
+                "date": "2025-01-01",
+            },
+            {
+                "id": "existing",
+                "amount_cents": 200,
+                "category": "transit",
+                "date": "2025-01-02",
+            },
+        ]
+    )
+    source.write_text(source_contents, encoding="utf-8")
+    database = tmp_path / "expenses.sqlite3"
+    existing = make_expense(500, "food", "2025-01-03", "existing")
+    save_expenses([existing], database)
+
+    with pytest.raises(StorageError, match="expense ID already exists"):
+        import_json_expenses(source, database)
+
+    assert load_expenses(database) == [existing]
+    assert source.read_text(encoding="utf-8") == source_contents
+
+
+def test_import_json_expenses_reports_missing_source(tmp_path: Path) -> None:
+    with pytest.raises(StorageError, match="does not exist"):
+        import_json_expenses(tmp_path / "missing.json", tmp_path / "expenses.sqlite3")
 
 
 def test_database_schema_initializes_and_persists_across_connections(
